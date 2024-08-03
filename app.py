@@ -8,12 +8,7 @@ st.set_page_config(layout="wide", page_icon="logo.png", page_title="Model Descri
         'Report a bug': "https://github.com/ModECI/MDF/",
         'About': "ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org/ for more."
     })
-header1, header2 = st.columns([1,12], vertical_alignment="top")
-with header1:
-    st.image("logo.png", width=100)
-with header2:
-    st.title("Welcome to Model Description Format")
-st.write("Lets get started! Choose one of the following methods.")
+
 # models: Purpose: To store the state of the model and update the model
 def run_simulation(param_inputs, mdf_model):
     mod_graph = mdf_model.graphs[0]
@@ -57,7 +52,7 @@ def show_mdf_graph(mdf_model):
     st.subheader("MDF Graph")
     mdf_model.to_graph_image(engine="dot", output_format="png", view_on_render=False, level=3, filename_root=mdf_model.id, only_warn_on_fail=(os.name == "nt"))
     image_path = mdf_model.id + ".png"
-    st.sidebar.image(image_path, caption="Model Graph Visualization")
+    st.image(image_path, caption="Model Graph Visualization")
 
 def show_json_output(mdf_model):
     st.subheader("JSON Output")
@@ -82,40 +77,54 @@ def view_tabs(mdf_model, param_inputs): # view
         show_json_output(mdf_model) # view
 
 def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs, mod_graph, nodes):
-    form = st.form(key="parameter_form")
-    valid_inputs = True
-    for node_wise_parameter_key, node_wise_parameter in enumerate(parameters):
-        # st.write("hi i am b", node_wise_parameter)
-        for i, param in enumerate(node_wise_parameter):
-            if isinstance(param.value, str) or param.value is None:
-                continue  
-            key = f"{param.id}_{i}"
-            if mdf_model.metadata:
-                value = form.text_input(f"{param.metadata.get('description', param.id)} ({param.id})", value=str(param.value), key=key)
-            else:
-                value = form.text_input(f"{param.id}", value=str(param.value), key=key)
+    with st.form(key="parameter_form"):
+        valid_inputs = True
+        
+        # Create two columns outside the loop
+        col1, col2 = st.columns(2)
+        
+        for node_wise_parameter_key, node_wise_parameter in enumerate(parameters):
+            for i, param in enumerate(node_wise_parameter):
+                if isinstance(param.value, str) or param.value is None:
+                    continue  
+                key = f"{param.id}_{i}"
+                
+                # Alternate between columns
+                current_col = col1 if i % 2 == 0 else col2
+                
+                with current_col:
+                    if mdf_model.metadata:
+                        value = st.text_input(f"{param.metadata.get('description', param.id)} ({param.id})", value=str(param.value), key=key)
+                    else:
+                        value = st.text_input(f"{param.id}", value=str(param.value), key=key)
+                
+                try:
+                    param_inputs[param.id] = float(value)
+                except ValueError:
+                    st.error(f"Invalid input for {param.id}. Please enter a valid number.")
+                    valid_inputs = False
+        st.write("Simulation Parameters:")
+        with st.container(border=True):
+            # Add Simulation Duration and Time Step inputs
+            col1, col2 = st.columns(2)
+            with col1:
+                sim_duration = st.text_input("Simulation Duration (s)", value=str(param_inputs["Simulation Duration (s)"]), key="sim_duration")
+            with col2:
+                time_step = st.text_input("Time Step (s)", value=str(param_inputs["Time Step (s)"]), key="time_step")
             
             try:
-                param_inputs[param.id] = float(value)
+                param_inputs["Simulation Duration (s)"] = float(sim_duration)
             except ValueError:
-                st.error(f"Invalid input for {param.id}. Please enter a valid number.")
+                st.error("Invalid input for Simulation Duration. Please enter a valid number.")
                 valid_inputs = False
+        try:
+            param_inputs["Time Step (s)"] = float(time_step)
+        except ValueError:
+            st.error("Invalid input for Time Step. Please enter a valid number.")
+            valid_inputs = False
 
-    sim_duration = form.text_input("Simulation Duration (s)", value=str(param_inputs["Simulation Duration (s)"]), key="sim_duration")
-    time_step = form.text_input("Time Step (s)", value=str(param_inputs["Time Step (s)"]), key="time_step")
-
-    try:
-        param_inputs["Simulation Duration (s)"] = float(sim_duration)
-    except ValueError:
-        st.error("Invalid input for Simulation Duration. Please enter a valid number.")
-        valid_inputs = False
-    try:
-        param_inputs["Time Step (s)"] = float(time_step)
-    except ValueError:
-        st.error("Invalid input for Time Step. Please enter a valid number.")
-        valid_inputs = False
-
-    run_button = form.form_submit_button("Run Simulation")
+        run_button = st.form_submit_button("Run Simulation")
+        
     if run_button:
         if valid_inputs:
             for b in parameters:
@@ -123,8 +132,6 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
                     if param.id in param_inputs:
                         param.value = param_inputs[param.id]
             view_tabs(mdf_model, param_inputs)
-        # else:
-        #     st.error("Please correct the invalid inputs before running the simulation.")
 
 # def upload_file_and_load_to_model():
 #     st.write("Choose how to load the model:")
@@ -239,6 +246,12 @@ def load_model_from_content(file_content, file_extension):
 
 
 def main():
+    header1, header2 = st.columns([1,12], vertical_alignment="top")
+    with header1:
+        st.image("logo.png", width=100)
+    with header2:
+        st.title("Welcome to Model Description Format")
+    st.write("Lets get started! Choose one of the following methods.")
     mdf_model = upload_file_and_load_to_model() # controller
     if mdf_model:
         mod_graph = mdf_model.graphs[0]
