@@ -50,59 +50,68 @@ def run_simulation(param_inputs, mdf_model):
         chart_data = pd.DataFrame(output_values)
         chart_data['Time'] = times
         chart_data.set_index('Time', inplace=True)
-        print(chart_data)
-        show_simulation_results(chart_data)
-    return None
-# def run_simulation(param_inputs, mdf_model):
-#     mod_graph = mdf_model.graphs[0]
-#     nodes = mod_graph.nodes
-#     for node in nodes:
-#         parameters = node.parameters
-#         outputs = node.output_ports
-#         eg = EvaluableGraph(mod_graph, verbose=False)
-#         duration = param_inputs["Simulation Duration (s)"]
-#         dt = param_inputs["Time Step (s)"]
-#         t = 0
-#         times = []
-#         output_values = {op.value: [] for op in outputs}
-#         while t <= duration:
-#             times.append(t)
-#             if t == 0:
-#                 eg.evaluate()
-#             else:
-#                 eg.evaluate(time_increment=dt)
+        return chart_data
+    #     print(chart_data)
+    #     show_simulation_results(chart_data)
+    # return None
 
-#             for param in output_values:
-#                 if any(operator in param for operator in "+-/*"):
-#                     eval_param = eg.enodes[node.id].evaluable_outputs[param]
-#                 else:
-#                     eval_param = eg.enodes[node.id].evaluable_parameters[param] 
-#                 output_value = eval_param.curr_value
-#                 if isinstance(output_value, (list, np.ndarray)):
-#                     # Extract the scalar value from the list or array
-#                     output_values[param].append(output_value[0] if len(output_value) > 0 else np.nan)
-#                 else:
-#                     output_values[param].append(output_value)
-#             t += dt
-        
-#         chart_data = pd.DataFrame(output_values)
-#         chart_data['Time'] = times
-#         chart_data.set_index('Time', inplace=True)
-#         print(chart_data)
-#         show_simulation_results(chart_data)
-#     return None
+# def show_simulation_results(chart_data):
+#     try:
+#         if 'selected_columns' not in st.session_state:
+#             st.session_state.selected_columns = {col: True for col in chart_data.columns}
+
+#         def handle_checkbox_change():
+#             st.session_state.selected_columns[column] = st.session_state[f"checkbox_{column}"]
+
+#         columns = chart_data.columns
+#         for column in columns:
+#             if f"checkbox_{column}" not in st.session_state:
+#                 st.session_state[f"checkbox_{column}"] = st.session_state.selected_columns[column]
+#             st.checkbox(
+#                 f"Show {column}",
+#                 value=st.session_state.selected_columns[column],
+#                 key=f"checkbox_{column}",
+#                 on_change=handle_checkbox_change
+#             )
+
+#         # Filter the data based on selected checkboxes
+#         filtered_data = chart_data[[col for col, selected in st.session_state.selected_columns.items() if selected]]
+
+#         # Display the line chart with filtered data
+#         st.line_chart(filtered_data, use_container_width=True, height=400)
+#     except Exception as e:
+#         st.error(f"Error plotting chart: {e}")
+#         st.write("Chart data types:")
+#         st.write(chart_data.dtypes)
+#         st.write("Chart data head:")
+#         st.write(chart_data.head())
+#         st.write("Chart data description:")
+#         st.write(chart_data.describe())
 
 def show_simulation_results(chart_data):
-    try:
-        st.line_chart(chart_data, use_container_width=True, height=400)
-    except Exception as e:
-        st.error(f"Error plotting chart: {e}")
-        st.write("Chart data types:")
-        st.write(chart_data.dtypes)
-        st.write("Chart data head:")
-        st.write(chart_data.head())
-        st.write("Chart data description:")
-        st.write(chart_data.describe())
+    if chart_data is not None:
+        if 'selected_columns' not in st.session_state:
+            st.session_state.selected_columns = {col: True for col in chart_data.columns}
+
+        columns = chart_data.columns
+        for column in columns:
+            st.checkbox(
+                f"{column}",
+                value=st.session_state.selected_columns[column],
+                key=f"checkbox_{column}",
+                on_change=update_selected_columns,
+                args=(column,)
+            )
+
+        # Filter the data based on selected checkboxes
+        filtered_data = chart_data[[col for col, selected in st.session_state.selected_columns.items() if selected]]
+
+        # Display the line chart with filtered data
+        st.line_chart(filtered_data, use_container_width=True, height=400)
+
+def update_selected_columns(column):
+    st.session_state.selected_columns[column] = st.session_state[f"checkbox_{column}"]
+
 
 def show_mdf_graph(mdf_model):
     st.subheader("MDF Graph")
@@ -114,10 +123,17 @@ def show_json_output(mdf_model):
     st.subheader("JSON Output")
     st.json(mdf_model.to_json())
 
+# st.cache_data()
 def view_tabs(mdf_model, param_inputs): # view
     tab1, tab2, tab3 = st.tabs(["Simulation Results", "MDF Graph", "Json Output"])
     with tab1:
-        run_simulation(param_inputs, mdf_model) # model
+        if 'simulation_results' not in st.session_state:
+            st.session_state.simulation_results = None
+            
+        if st.session_state.simulation_results is not None:
+            show_simulation_results(st.session_state.simulation_results)
+        else:
+            st.write("Run the simulation to see results.") # model
     with tab2:
         show_mdf_graph(mdf_model) # view
     with tab3:
@@ -146,35 +162,43 @@ def display_and_edit_array(array, key):
 def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs, mod_graph, nodes):
     with st.form(key="parameter_form"):
         valid_inputs = True
-        
-        # Create two columns outside the loop
-        col1, col2 = st.columns(2)
-        
-        for node_wise_parameter_key, node_wise_parameter in enumerate(parameters):
-            for i, param in enumerate(node_wise_parameter):
-                if isinstance(param.value, str) or param.value is None:
-                    continue  
-                key = f"{param.id}_{i}"
-                
-                # Alternate between columns
-                current_col = col1 if i % 2 == 0 else col2
-                
-                with current_col:
-                    if isinstance(param.value, (list, np.ndarray)):
-                        st.write(f"{param.id}:")
-                        value = display_and_edit_array(param.value, key)
+        st.write("Model Parameters:")
+        with st.container(border=True):
+            # Create two columns outside the loop
+            col1, col2, col3, col4 = st.columns(4)
+            
+            for node_wise_parameter_key, node_wise_parameter in enumerate(parameters):
+                for i, param in enumerate(node_wise_parameter):
+                    if isinstance(param.value, str) or param.value is None:
+                        continue  
+                    key = f"{param.id}_{i}"
+                    
+                    # Alternate between columns
+                    if i % 4 == 0:
+                        current_col = col1
+                    elif i%4 == 1:
+                        current_col = col2
+                    elif i%4 == 2:
+                        current_col = col3
                     else:
-                        if param.metadata:
-                            value = st.text_input(f"{param.metadata.get('description', param.id)} ({param.id})", value=str(param.value), key=key)
+                        current_col = col4
+                    
+                    with current_col:
+                        if isinstance(param.value, (list, np.ndarray)):
+                            st.write(f"{param.id}:")
+                            value = display_and_edit_array(param.value, key)
                         else:
-                            value = st.text_input(f"{param.id}", value=str(param.value), key=key)
-                        try:
-                            param_inputs[param.id] = float(value)
-                        except ValueError:
-                            st.error(f"Invalid input for {param.id}. Please enter a valid number.")
-                            valid_inputs = False
-                
-                param_inputs[param.id] = value
+                            if param.metadata:
+                                value = st.text_input(f"{param.metadata.get('description', param.id)} ({param.id})", value=str(param.value), key=key)
+                            else:
+                                value = st.text_input(f"{param.id}", value=str(param.value), key=key)
+                            try:
+                                param_inputs[param.id] = float(value)
+                            except ValueError:
+                                st.error(f"Invalid input for {param.id}. Please enter a valid number.")
+                                valid_inputs = False
+                    
+                    param_inputs[param.id] = value
         st.write("Simulation Parameters:")
         with st.container(border=True):
             # Add Simulation Duration and Time Step inputs
@@ -203,7 +227,9 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
                 for param in b:
                     if param.id in param_inputs:
                         param.value = param_inputs[param.id]
-            view_tabs(mdf_model, param_inputs)
+            st.session_state.simulation_results = run_simulation(param_inputs, mdf_model)
+
+    view_tabs(mdf_model, param_inputs)
 
 # def upload_file_and_load_to_model():
 #     st.write("Choose how to load the model:")
@@ -256,24 +282,26 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
 #     return None
 
 def upload_file_and_load_to_model():
-    # col1, col2 = st.columns(2)
-    # with col1:
+    
+    
     uploaded_file = st.file_uploader("Choose a JSON/YAML/BSON file", type=["json", "yaml", "bson"])
     if uploaded_file is not None:
         file_content = uploaded_file.getvalue()
         file_extension = uploaded_file.name.split('.')[-1].lower()
         return load_model_from_content(file_content, file_extension)
-    github_url = st.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
-    if github_url:
-        try:
-            response = requests.get(github_url)
-            response.raise_for_status()
-            file_content = response.content
-            file_extension = github_url.split('.')[-1].lower()
-            return load_model_from_content(file_content, file_extension)
-        except requests.RequestException as e:
-            st.error(f"Error loading file from GitHub: {e}")
-            return None
+    col2, col3 = st.columns(2)
+    with col2:    
+        github_url = st.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
+        if github_url:
+            try:
+                response = requests.get(github_url)
+                response.raise_for_status()
+                file_content = response.content
+                file_extension = github_url.split('.')[-1].lower()
+                return load_model_from_content(file_content, file_extension)
+            except requests.RequestException as e:
+                st.error(f"Error loading file from GitHub: {e}")
+                return None
     # with col2:
     # example_models = {
     #     "Newton Cooling Model": "https://raw.githubusercontent.com/ModECI/MDF/development/examples/MDF/NewtonCoolingModel.json",
@@ -306,9 +334,10 @@ def upload_file_and_load_to_model():
         # "RNN":"./examples/RNNs.json",
         # "IAF":"./examples/IAFs.json"
     }
-    selected_model = st.selectbox("Choose an example model", list(example_models.keys()), index=None)
-    if selected_model:
-        return load_mdf_json(example_models[selected_model])
+    with col3:
+        selected_model = st.selectbox("Choose an example model", list(example_models.keys()), index=None, placeholder="Dont have an MDF Model? Try some sample examples here!")
+        if selected_model:
+            return load_mdf_json(example_models[selected_model])
 
 
 
@@ -332,6 +361,8 @@ def load_model_from_content(file_content, file_extension):
 
 
 def main():
+    if "checkbox" not in st.session_state:
+        st.session_state.checkbox = False
     header1, header2 = st.columns([1,12], vertical_alignment="top")
     with header1:
         st.image("logo.png", width=100)
