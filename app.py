@@ -58,14 +58,11 @@ def show_simulation_results(all_node_results):
     if all_node_results is not None:
         for node_id, chart_data in all_node_results.items():
             st.subheader(f"Simulation Results for Node: {node_id}")
-            st.write("hi i am all node results",all_node_results)
             if 'selected_columns' not in st.session_state:
                 st.session_state.selected_columns = {node_id: {col: True for col in chart_data.columns}}
             elif node_id not in st.session_state.selected_columns:
                 st.session_state.selected_columns[node_id] = {col: True for col in chart_data.columns}
-            st.write("Hii i am chart data",chart_data)
             columns = chart_data.columns
-            st.write("Hii i am columns",columns)
             for column in columns:
                 st.checkbox(
                     f"{column}",
