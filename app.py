@@ -126,7 +126,7 @@ def show_mdf_graph(mdf_model):
     st.image(image_path, caption="Model Graph Visualization")
 
 def show_json_output(mdf_model):
-    st.subheader("JSON Output")
+    st.subheader("JSON Model")
     st.json(mdf_model.to_json())
 
 # st.cache_data()
