@@ -1,29 +1,21 @@
-{
+{   
     "SwitchedRLC_Circuit": {
+        
         "format": "ModECI MDF v0.4",
-        "generating_application": "Python modeci-mdf v0.4.11",
+        "generating_application": "Python modeci-mdf v0.4.10",
         "metadata": {
             "preferred_duration": 2,
             "preferred_dt": 0.001
         },
         "graphs": {
+         
             "SwitchedRLC_Circuit": {
                 "nodes": {
+                   
                     "V": {
                         "parameters": {
                             "Vs": {
-                                "conditions": [
-                                    {
-                                        "id": "off",
-                                        "test": "time<0.5",
-                                        "value": "0"
-                                    },
-                                    {
-                                        "id": "on",
-                                        "test": "time>=0.5",
-                                        "value": 0.1
-                                    }
-                                ]
+                                "value":"0.5"
                             },
                             "R": {
                                 "metadata": {
@@ -38,6 +30,9 @@
                                 "value": 1
                             },
                             "C": {
+                                "metadata": {
+                                    "description": "Capacitance in Farads"
+                                },
                                 "value": 0.001
                             },
                             "time": {
@@ -45,17 +40,33 @@
                                 "time_derivative": "1"
                             },
                             "V": {
+                                "metadata": {
+                                    "description": "Voltage across the circuit",
+                                    "plot":"True"
+                                },
                                 "default_initial_value": 0,
                                 "time_derivative": "i_C /C"
                             },
                             "i_R": {
+                                "metadata": {
+                                    "description": "Current through the resistor",
+                                    "plot":"True"
+                                },
                                 "value": "V / R"
                             },
                             "i_L": {
+                                "metadata": {
+                                    "description": "Current through the inductor",
+                                    "plot":"True"
+                                },
                                 "default_initial_value": 0,
                                 "time_derivative": "(Vs - V)/L"
                             },
                             "i_C": {
+                                "metadata": {
+                                    "description": "Current through the capacitor",
+                                    "plot":"True"
+                                },
                                 "value": "i_L-i_R"
                             }
                         },
@@ -66,10 +77,14 @@
                             "i_L_out": {
                                 "value": "i_L"
                             }
+                            
                         }
                     }
                 }
+                
             }
+            
+            
         }
     }
 }

@@ -1,6 +1,10 @@
 {
     "FN": {
         "format": "ModECI MDF v0.4",
+        "metadata": {
+            "preferred_duration": 0.1,
+            "preferred_dt": 0.00005
+        },
         "graphs": {
             "FN": {
                 "notes": "FitzHugh Nagumo cell model - originally specified in NeuroML/LEMS",

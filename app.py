@@ -3,6 +3,7 @@ from modeci_mdf.mdf import Model, Graph, Node, Parameter, OutputPort
 from modeci_mdf.utils import load_mdf_json, load_mdf, load_mdf_yaml
 from modeci_mdf.execution_engine import EvaluableGraph, EvaluableOutput
 import json
+import numpy as np
 import requests
 st.set_page_config(layout="wide", page_icon="logo.png", page_title="Model Description Format", menu_items={
         'Report a bug': "https://github.com/ModECI/MDF/",
@@ -10,43 +11,98 @@ st.set_page_config(layout="wide", page_icon="logo.png", page_title="Model Descri
     })
 
 # models: Purpose: To store the state of the model and update the model
+import numpy as np
+
 def run_simulation(param_inputs, mdf_model):
     mod_graph = mdf_model.graphs[0]
     nodes = mod_graph.nodes
-    for node in nodes:
-        parameters = node.parameters
-        outputs = node.output_ports
-        eg = EvaluableGraph(mod_graph, verbose=False)
-        # eo = EvaluableOutput(mod_graph, verbose=)
-        duration = param_inputs["Simulation Duration (s)"]
-        dt = param_inputs["Time Step (s)"]
-        print("hi me param_inputs inside run simulation", param_inputs)
-        t = 0
-        times = []
-        output_values = {op.value: [] for op in outputs}
-        while t <= duration:
-            times.append(t)
-            if t == 0:
-                eg.evaluate()
-            else:
-                eg.evaluate(time_increment=dt)
-
-            for param in output_values:
-                if any(operator in param  for operator in "+-/*"):
-                    eval_param = eg.enodes[node.id].evaluable_outputs[param]
-                    
+    with st.spinner('Plotting the curve...'):
+        for node in nodes:
+            parameters = node.parameters
+            outputs = node.output_ports
+            eg = EvaluableGraph(mod_graph, verbose=False)
+            duration = param_inputs["Simulation Duration (s)"]
+            dt = param_inputs["Time Step (s)"]
+            t = 0
+            times = []
+            output_values = {op.value: [] for op in outputs}
+            while t <= duration:
+                times.append(t)
+                if t == 0:
+                    eg.evaluate()
                 else:
-                    eval_param = eg.enodes[node.id].evaluable_parameters[param] 
-                output_values[param].append(eval_param.curr_value)
-            t += dt
+                    eg.evaluate(time_increment=dt)
+
+                for param in output_values:
+                    if any(operator in param for operator in "+-/*"):
+                        eval_param = eg.enodes[node.id].evaluable_outputs[param]
+                    else:
+                        eval_param = eg.enodes[node.id].evaluable_parameters[param] 
+                    output_value = eval_param.curr_value
+                    if isinstance(output_value, (list, np.ndarray)):
+                        # Extract the scalar value from the list or array
+                        scalar_value = output_value[0] if len(output_value) > 0 else np.nan
+                        output_values[param].append(float(scalar_value))  # Convert to Python float
+                    else:
+                        output_values[param].append(float(output_value))  # Convert to Python float
+                t += dt
+        
         chart_data = pd.DataFrame(output_values)
         chart_data['Time'] = times
         chart_data.set_index('Time', inplace=True)
+        print(chart_data)
         show_simulation_results(chart_data)
     return None
-# views: Purpose: To display the state of the model 
+# def run_simulation(param_inputs, mdf_model):
+#     mod_graph = mdf_model.graphs[0]
+#     nodes = mod_graph.nodes
+#     for node in nodes:
+#         parameters = node.parameters
+#         outputs = node.output_ports
+#         eg = EvaluableGraph(mod_graph, verbose=False)
+#         duration = param_inputs["Simulation Duration (s)"]
+#         dt = param_inputs["Time Step (s)"]
+#         t = 0
+#         times = []
+#         output_values = {op.value: [] for op in outputs}
+#         while t <= duration:
+#             times.append(t)
+#             if t == 0:
+#                 eg.evaluate()
+#             else:
+#                 eg.evaluate(time_increment=dt)
+
+#             for param in output_values:
+#                 if any(operator in param for operator in "+-/*"):
+#                     eval_param = eg.enodes[node.id].evaluable_outputs[param]
+#                 else:
+#                     eval_param = eg.enodes[node.id].evaluable_parameters[param] 
+#                 output_value = eval_param.curr_value
+#                 if isinstance(output_value, (list, np.ndarray)):
+#                     # Extract the scalar value from the list or array
+#                     output_values[param].append(output_value[0] if len(output_value) > 0 else np.nan)
+#                 else:
+#                     output_values[param].append(output_value)
+#             t += dt
+        
+#         chart_data = pd.DataFrame(output_values)
+#         chart_data['Time'] = times
+#         chart_data.set_index('Time', inplace=True)
+#         print(chart_data)
+#         show_simulation_results(chart_data)
+#     return None
+
 def show_simulation_results(chart_data):
-    st.line_chart(chart_data, use_container_width=True, height=400)
+    try:
+        st.line_chart(chart_data, use_container_width=True, height=400)
+    except Exception as e:
+        st.error(f"Error plotting chart: {e}")
+        st.write("Chart data types:")
+        st.write(chart_data.dtypes)
+        st.write("Chart data head:")
+        st.write(chart_data.head())
+        st.write("Chart data description:")
+        st.write(chart_data.describe())
 
 def show_mdf_graph(mdf_model):
     st.subheader("MDF Graph")
@@ -61,20 +117,31 @@ def show_json_output(mdf_model):
 def view_tabs(mdf_model, param_inputs): # view
     tab1, tab2, tab3 = st.tabs(["Simulation Results", "MDF Graph", "Json Output"])
     with tab1:
-        # mod_graph = mdf_model.graphs[0]
-        # nodes = mod_graph.nodes
-        # for node in nodes:
-        #     st.write("Node Name: ", node.id)
-        #     node_parameters = {}
-        #     for param in node.parameters:
-        #         node_parameters[param.id] = node_parameters[param.id] = param.value if param.value else param.time_derivative
-        #     st.write("Node Parameters: ", node_parameters)   
         run_simulation(param_inputs, mdf_model) # model
-        #     show_simulation_results(chart_data) # view
     with tab2:
         show_mdf_graph(mdf_model) # view
     with tab3:
         show_json_output(mdf_model) # view
+
+def display_and_edit_array(array, key):
+    if isinstance(array, list):
+        array = np.array(array)
+    
+    rows, cols = array.shape if array.ndim > 1 else (1, len(array))
+    
+    edited_array = []
+    for i in range(rows):
+        row = []
+        for j in range(cols):
+            value = array[i][j] if array.ndim > 1 else array[i]
+            edited_value = st.text_input(f"[{i}][{j}]", value=str(value), key=f"{key}_{i}_{j}")
+            try:
+                row.append(float(edited_value))
+            except ValueError:
+                st.error(f"Invalid input for [{i}][{j}]. Please enter a valid number.")
+        edited_array.append(row)
+    
+    return np.array(edited_array)
 
 def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs, mod_graph, nodes):
     with st.form(key="parameter_form"):
@@ -93,16 +160,21 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
                 current_col = col1 if i % 2 == 0 else col2
                 
                 with current_col:
-                    if mdf_model.metadata:
-                        value = st.text_input(f"{param.metadata.get('description', param.id)} ({param.id})", value=str(param.value), key=key)
+                    if isinstance(param.value, (list, np.ndarray)):
+                        st.write(f"{param.id}:")
+                        value = display_and_edit_array(param.value, key)
                     else:
-                        value = st.text_input(f"{param.id}", value=str(param.value), key=key)
+                        if param.metadata:
+                            value = st.text_input(f"{param.metadata.get('description', param.id)} ({param.id})", value=str(param.value), key=key)
+                        else:
+                            value = st.text_input(f"{param.id}", value=str(param.value), key=key)
+                        try:
+                            param_inputs[param.id] = float(value)
+                        except ValueError:
+                            st.error(f"Invalid input for {param.id}. Please enter a valid number.")
+                            valid_inputs = False
                 
-                try:
-                    param_inputs[param.id] = float(value)
-                except ValueError:
-                    st.error(f"Invalid input for {param.id}. Please enter a valid number.")
-                    valid_inputs = False
+                param_inputs[param.id] = value
         st.write("Simulation Parameters:")
         with st.container(border=True):
             # Add Simulation Duration and Time Step inputs
@@ -203,27 +275,41 @@ def upload_file_and_load_to_model():
             st.error(f"Error loading file from GitHub: {e}")
             return None
     # with col2:
+    # example_models = {
+    #     "Newton Cooling Model": "https://raw.githubusercontent.com/ModECI/MDF/development/examples/MDF/NewtonCoolingModel.json",
+    #     "ABCD": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/ABCD.json",
+    #     "FN": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/FN.mdf.json",
+    #     "States": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/States.json",
+    #     "Other Model 4": "https://example.com/other_model_4.json"
+    # }
+    # selected_model = st.selectbox("Choose an example model", list(example_models.keys()), index=None)
+    # if selected_model:
+    #     example_url = example_models[selected_model]
+    #     try:
+    #         response = requests.get(example_url)
+    #         response.raise_for_status()
+    #         file_content = response.content
+    #         file_extension = example_url.split('.')[-1].lower()
+    #         return load_model_from_content(file_content, file_extension)
+    #     except requests.RequestException as e:
+    #         st.error(f"Error loading example model: {e}")
+    #         return None
+    # # st.button("Newton Cooling Model", on_click=load_mdf_json(""))
+    # return None
     example_models = {
-        "Newton Cooling Model": "https://raw.githubusercontent.com/ModECI/MDF/development/examples/MDF/NewtonCoolingModel.json",
-        "ABCD": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/ABCD.json",
-        "FN": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/FN.mdf.json",
-        "States": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/States.json",
-        "Other Model 4": "https://example.com/other_model_4.json"
+        "Newton Cooling Model": "./examples/NewtonCoolingModel.json",
+        # "ABCD": "./examples/ABCD.json",
+        "FN": "./examples/FN.mdf.json",
+        # "States": "./examples/States.json",
+        "Swicthed RLC Circuit": "./examples/switched_rlc_circuit.json",
+        # "Arrays":"./examples/Arrays.json",
+        # "RNN":"./examples/RNNs.json",
+        # "IAF":"./examples/IAFs.json"
     }
     selected_model = st.selectbox("Choose an example model", list(example_models.keys()), index=None)
     if selected_model:
-        example_url = example_models[selected_model]
-        try:
-            response = requests.get(example_url)
-            response.raise_for_status()
-            file_content = response.content
-            file_extension = example_url.split('.')[-1].lower()
-            return load_model_from_content(file_content, file_extension)
-        except requests.RequestException as e:
-            st.error(f"Error loading example model: {e}")
-            return None
-    # st.button("Newton Cooling Model", on_click=load_mdf_json(""))
-    return None
+        return load_mdf_json(example_models[selected_model])
+
 
 
 def load_model_from_content(file_content, file_extension):
