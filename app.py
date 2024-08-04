@@ -226,7 +226,7 @@ def upload_file_and_load_to_model():
         "Newton Cooling Model": "./examples/NewtonCoolingModel.json",
         # "ABCD": "./examples/ABCD.json",
         "FN": "./examples/FN.mdf.json",
-        # "States": "./examples/States.json",
+        "States": "./examples/States.json",
         "Swicthed RLC Circuit": "./examples/switched_rlc_circuit.json",
         # "Arrays":"./examples/Arrays.json",
         # "RNN":"./examples/RNNs.json",
