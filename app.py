@@ -131,7 +131,7 @@ def show_json_output(mdf_model):
 
 # st.cache_data()
 def view_tabs(mdf_model, param_inputs): # view
-    tab1, tab2, tab3 = st.tabs(["Simulation Results", "MDF Graph", "Json Output"])
+    tab1, tab2, tab3 = st.tabs(["Simulation Results", "MDF Graph", "Json Model"])
     with tab1:
         if 'simulation_results' not in st.session_state:
             st.session_state.simulation_results = None
@@ -378,7 +378,6 @@ def main():
     mdf_model = upload_file_and_load_to_model() # controller
 
     if mdf_model:
-        # reset_simulation_state()
 
         mod_graph = mdf_model.graphs[0]
         nodes = mod_graph.nodes
