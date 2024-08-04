@@ -378,7 +378,7 @@ def main():
     mdf_model = upload_file_and_load_to_model() # controller
 
     if mdf_model:
-        reset_simulation_state()
+        # reset_simulation_state()
 
         mod_graph = mdf_model.graphs[0]
         nodes = mod_graph.nodes
