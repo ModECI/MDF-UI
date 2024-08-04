@@ -12,6 +12,12 @@ st.set_page_config(layout="wide", page_icon="logo.png", page_title="Model Descri
 
 # models: Purpose: To store the state of the model and update the model
 import numpy as np
+def reset_simulation_state():
+    """Reset simulation-related session state variables."""
+    if 'simulation_results' in st.session_state:
+        del st.session_state.simulation_results
+    if 'selected_columns' in st.session_state:
+        del st.session_state.selected_columns
 
 def run_simulation(param_inputs, mdf_model):
     mod_graph = mdf_model.graphs[0]
@@ -370,7 +376,10 @@ def main():
         st.title("Welcome to Model Description Format")
     st.write("Lets get started! Choose one of the following methods.")
     mdf_model = upload_file_and_load_to_model() # controller
+
     if mdf_model:
+        reset_simulation_state()
+
         mod_graph = mdf_model.graphs[0]
         nodes = mod_graph.nodes
         parameters = []
