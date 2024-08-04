@@ -10,8 +10,6 @@ st.set_page_config(layout="wide", page_icon="logo.png", page_title="Model Descri
         'About': "ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org/ for more."
     })
 
-# models: Purpose: To store the state of the model and update the model
-import numpy as np
 def reset_simulation_state():
     """Reset simulation-related session state variables."""
     if 'simulation_results' in st.session_state:
@@ -22,102 +20,67 @@ def reset_simulation_state():
 def run_simulation(param_inputs, mdf_model):
     mod_graph = mdf_model.graphs[0]
     nodes = mod_graph.nodes
-    with st.spinner('Plotting the curve...'):
-        for node in nodes:
-            parameters = node.parameters
-            outputs = node.output_ports
-            eg = EvaluableGraph(mod_graph, verbose=False)
-            duration = param_inputs["Simulation Duration (s)"]
-            dt = param_inputs["Time Step (s)"]
-            t = 0
-            times = []
-            output_values = {op.value: [] for op in outputs}
-            while t <= duration:
-                times.append(t)
-                if t == 0:
-                    eg.evaluate()
-                else:
-                    eg.evaluate(time_increment=dt)
-
-                for param in output_values:
-                    if any(operator in param for operator in "+-/*"):
-                        eval_param = eg.enodes[node.id].evaluable_outputs[param]
-                    else:
-                        eval_param = eg.enodes[node.id].evaluable_parameters[param] 
-                    output_value = eval_param.curr_value
-                    if isinstance(output_value, (list, np.ndarray)):
-                        # Extract the scalar value from the list or array
-                        scalar_value = output_value[0] if len(output_value) > 0 else np.nan
-                        output_values[param].append(float(scalar_value))  # Convert to Python float
-                    else:
-                        output_values[param].append(float(output_value))  # Convert to Python float
-                t += dt
+    duration = param_inputs["Simulation Duration (s)"]
+    dt = param_inputs["Time Step (s)"]
+    
+    all_node_results = {}
+    
+    for node in nodes:
+        eg = EvaluableGraph(mod_graph, verbose=False)
+        t = 0
+        times = []
+        node_outputs = {op.id: [] for op in node.output_ports}
+        node_outputs['Time'] = []
         
-        chart_data = pd.DataFrame(output_values)
-        chart_data['Time'] = times
-        chart_data.set_index('Time', inplace=True)
-        return chart_data
-    #     print(chart_data)
-    #     show_simulation_results(chart_data)
-    # return None
+        while t <= duration:
+            times.append(t)
+            if t == 0:
+                eg.evaluate()
+            else:
+                eg.evaluate(time_increment=dt)
 
-# def show_simulation_results(chart_data):
-#     try:
-#         if 'selected_columns' not in st.session_state:
-#             st.session_state.selected_columns = {col: True for col in chart_data.columns}
+            node_outputs['Time'].append(t)
+            for op in node.output_ports:
+                eval_param = eg.enodes[node.id].evaluable_outputs[op.id]
+                output_value = eval_param.curr_value
+                if isinstance(output_value, (list, np.ndarray)):
+                    scalar_value = output_value[0] if len(output_value) > 0 else np.nan
+                    node_outputs[op.id].append(float(scalar_value))
+                else:
+                    node_outputs[op.id].append(float(output_value))
+            t += dt
+        
+        all_node_results[node.id] = pd.DataFrame(node_outputs).set_index('Time')
+    
+    return all_node_results
 
-#         def handle_checkbox_change():
-#             st.session_state.selected_columns[column] = st.session_state[f"checkbox_{column}"]
+def show_simulation_results(all_node_results):
+    if all_node_results is not None:
+        for node_id, chart_data in all_node_results.items():
+            st.subheader(f"Simulation Results for Node: {node_id}")
+            
+            if 'selected_columns' not in st.session_state:
+                st.session_state.selected_columns = {node_id: {col: True for col in chart_data.columns}}
+            elif node_id not in st.session_state.selected_columns:
+                st.session_state.selected_columns[node_id] = {col: True for col in chart_data.columns}
 
-#         columns = chart_data.columns
-#         for column in columns:
-#             if f"checkbox_{column}" not in st.session_state:
-#                 st.session_state[f"checkbox_{column}"] = st.session_state.selected_columns[column]
-#             st.checkbox(
-#                 f"Show {column}",
-#                 value=st.session_state.selected_columns[column],
-#                 key=f"checkbox_{column}",
-#                 on_change=handle_checkbox_change
-#             )
+            columns = chart_data.columns
+            for column in columns:
+                st.checkbox(
+                    f"{column}",
+                    value=st.session_state.selected_columns[node_id][column],
+                    key=f"checkbox_{node_id}_{column}",
+                    on_change=update_selected_columns,
+                    args=(node_id, column,)
+                )
 
-#         # Filter the data based on selected checkboxes
-#         filtered_data = chart_data[[col for col, selected in st.session_state.selected_columns.items() if selected]]
+            # Filter the data based on selected checkboxes
+            filtered_data = chart_data[[col for col, selected in st.session_state.selected_columns[node_id].items() if selected]]
 
-#         # Display the line chart with filtered data
-#         st.line_chart(filtered_data, use_container_width=True, height=400)
-#     except Exception as e:
-#         st.error(f"Error plotting chart: {e}")
-#         st.write("Chart data types:")
-#         st.write(chart_data.dtypes)
-#         st.write("Chart data head:")
-#         st.write(chart_data.head())
-#         st.write("Chart data description:")
-#         st.write(chart_data.describe())
-
-def show_simulation_results(chart_data):
-    if chart_data is not None:
-        if 'selected_columns' not in st.session_state:
-            st.session_state.selected_columns = {col: True for col in chart_data.columns}
-
-        columns = chart_data.columns
-        for column in columns:
-            st.checkbox(
-                f"{column}",
-                value=st.session_state.selected_columns[column],
-                key=f"checkbox_{column}",
-                on_change=update_selected_columns,
-                args=(column,)
-            )
-
-        # Filter the data based on selected checkboxes
-        filtered_data = chart_data[[col for col, selected in st.session_state.selected_columns.items() if selected]]
-
-        # Display the line chart with filtered data
-        st.line_chart(filtered_data, use_container_width=True, height=400)
-
-def update_selected_columns(column):
-    st.session_state.selected_columns[column] = st.session_state[f"checkbox_{column}"]
-
+            # Display the line chart with filtered data
+            st.line_chart(filtered_data, use_container_width=True, height=400)
+def update_selected_columns(node_id, column):
+    st.session_state.selected_columns[node_id][column] = st.session_state[f"checkbox_{node_id}_{column}"]
 
 def show_mdf_graph(mdf_model):
     st.subheader("MDF Graph")
@@ -237,56 +200,6 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
 
     view_tabs(mdf_model, param_inputs)
 
-# def upload_file_and_load_to_model():
-#     st.write("Choose how to load the model:")
-#     load_option = st.radio("", ("Upload File", "GitHub URL", "Example Models"), )
-#     st.write("Choose how to load the model:")
-#     if load_option == "Upload File":
-#         uploaded_file = st.file_uploader("Choose a JSON/YAML/BSON file", type=["json", "yaml", "bson"])
-#         if uploaded_file is not None:
-#             file_content = uploaded_file.getvalue()
-#             file_extension = uploaded_file.name.split('.')[-1].lower()
-#             return load_model_from_content(file_content, file_extension)
-
-#     elif load_option == "GitHub URL":
-#         st.write("sample_github_url = https://raw.githubusercontent.com/ModECI/MDF/development/examples/MDF/NewtonCoolingModel.json")
-#         github_url = st.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
-#         if github_url:
-#             try:
-#                 response = requests.get(github_url)
-#                 response.raise_for_status()
-#                 file_content = response.content
-#                 file_extension = github_url.split('.')[-1].lower()
-#                 return load_model_from_content(file_content, file_extension)
-#             except requests.RequestException as e:
-#                 st.error(f"Error loading file from GitHub: {e}")
-#                 return None
-
-#     elif load_option == "Example Models":
-#         example_models = {
-#             "Newton Cooling Model": "https://raw.githubusercontent.com/ModECI/MDF/development/examples/MDF/NewtonCoolingModel.json",
-#             "ABCD": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/ABCD.json",
-#             "FN": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/FN.mdf.json",
-#             "States": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/States.json",
-#             "Other Model 4": "https://example.com/other_model_4.json"
-#         }
-
-#         selected_model = st.selectbox("Choose an example model", list(example_models.keys()))
-#         if selected_model:
-#             example_url = example_models[selected_model]
-#             try:
-#                 response = requests.get(example_url)
-#                 response.raise_for_status()
-#                 file_content = response.content
-#                 file_extension = example_url.split('.')[-1].lower()
-#                 return load_model_from_content(file_content, file_extension)
-#             except requests.RequestException as e:
-#                 st.error(f"Error loading example model: {e}")
-#                 return None
-
-#     st.write("Try out example files:")
-#     return None
-
 def upload_file_and_load_to_model():
     
     
@@ -308,28 +221,7 @@ def upload_file_and_load_to_model():
             except requests.RequestException as e:
                 st.error(f"Error loading file from GitHub: {e}")
                 return None
-    # with col2:
-    # example_models = {
-    #     "Newton Cooling Model": "https://raw.githubusercontent.com/ModECI/MDF/development/examples/MDF/NewtonCoolingModel.json",
-    #     "ABCD": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/ABCD.json",
-    #     "FN": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/FN.mdf.json",
-    #     "States": "https://raw.githubusercontent.com/ModECI/MDF/main/examples/MDF/States.json",
-    #     "Other Model 4": "https://example.com/other_model_4.json"
-    # }
-    # selected_model = st.selectbox("Choose an example model", list(example_models.keys()), index=None)
-    # if selected_model:
-    #     example_url = example_models[selected_model]
-    #     try:
-    #         response = requests.get(example_url)
-    #         response.raise_for_status()
-    #         file_content = response.content
-    #         file_extension = example_url.split('.')[-1].lower()
-    #         return load_model_from_content(file_content, file_extension)
-    #     except requests.RequestException as e:
-    #         st.error(f"Error loading example model: {e}")
-    #         return None
-    # # st.button("Newton Cooling Model", on_click=load_mdf_json(""))
-    # return None
+
     example_models = {
         "Newton Cooling Model": "./examples/NewtonCoolingModel.json",
         # "ABCD": "./examples/ABCD.json",
@@ -339,6 +231,7 @@ def upload_file_and_load_to_model():
         # "Arrays":"./examples/Arrays.json",
         # "RNN":"./examples/RNNs.json",
         # "IAF":"./examples/IAFs.json"
+        "Izhikevich Test":"./examples/IzhikevichTest.mdf.json"
     }
     with col3:
         selected_model = st.selectbox("Choose an example model", list(example_models.keys()), index=None, placeholder="Dont have an MDF Model? Try some sample examples here!")
