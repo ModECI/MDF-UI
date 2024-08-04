@@ -29,7 +29,7 @@ def run_simulation(param_inputs, mdf_model):
         eg = EvaluableGraph(mod_graph, verbose=False)
         t = 0
         times = []
-        node_outputs = {op.id: [] for op in node.output_ports}
+        node_outputs = {op.value : [] for op in node.output_ports}
         node_outputs['Time'] = []
         
         while t <= duration:
@@ -45,9 +45,9 @@ def run_simulation(param_inputs, mdf_model):
                 output_value = eval_param.curr_value
                 if isinstance(output_value, (list, np.ndarray)):
                     scalar_value = output_value[0] if len(output_value) > 0 else np.nan
-                    node_outputs[op.id].append(float(scalar_value))
+                    node_outputs[op.value].append(float(scalar_value))
                 else:
-                    node_outputs[op.id].append(float(output_value))
+                    node_outputs[op.value].append(float(output_value))
             t += dt
         
         all_node_results[node.id] = pd.DataFrame(node_outputs).set_index('Time')
@@ -58,13 +58,14 @@ def show_simulation_results(all_node_results):
     if all_node_results is not None:
         for node_id, chart_data in all_node_results.items():
             st.subheader(f"Simulation Results for Node: {node_id}")
-            
+            st.write("hi i am all node results",all_node_results)
             if 'selected_columns' not in st.session_state:
                 st.session_state.selected_columns = {node_id: {col: True for col in chart_data.columns}}
             elif node_id not in st.session_state.selected_columns:
                 st.session_state.selected_columns[node_id] = {col: True for col in chart_data.columns}
-
+            st.write("Hii i am chart data",chart_data)
             columns = chart_data.columns
+            st.write("Hii i am columns",columns)
             for column in columns:
                 st.checkbox(
                     f"{column}",

@@ -2,6 +2,10 @@
     "States": {
         "format": "ModECI MDF v0.4",
         "generating_application": "Python modeci-mdf v0.4.11",
+        "metadata": {
+            "preferred_duration": 10,
+            "preferred_dt": 0.01
+        },
         "graphs": {
             "state_example": {
                 "nodes": {
