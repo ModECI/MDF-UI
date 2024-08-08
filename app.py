@@ -201,14 +201,14 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
 def upload_file_and_load_to_model():
     
     
-    uploaded_file = st.file_uploader("Choose a JSON/YAML/BSON file", type=["json", "yaml", "bson"])
+    uploaded_file = st.sidebar.file_uploader("Choose a JSON/YAML/BSON file", type=["json", "yaml", "bson"])
     if uploaded_file is not None:
         file_content = uploaded_file.getvalue()
         file_extension = uploaded_file.name.split('.')[-1].lower()
         return load_model_from_content(file_content, file_extension)
     col2, col3 = st.columns(2)
     with col2:    
-        github_url = st.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
+        github_url = st.sidebar.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
         if github_url:
             try:
                 response = requests.get(github_url)
@@ -226,13 +226,14 @@ def upload_file_and_load_to_model():
         "FN": "./examples/FN.mdf.json",
         "States": "./examples/States.json",
         "Swicthed RLC Circuit": "./examples/switched_rlc_circuit.json",
+        "Simple":"./examples/Simple.json",
         # "Arrays":"./examples/Arrays.json",
         # "RNN":"./examples/RNNs.json",
         # "IAF":"./examples/IAFs.json"
         "Izhikevich Test":"./examples/IzhikevichTest.mdf.json"
     }
     with col3:
-        selected_model = st.selectbox("Choose an example model", list(example_models.keys()), index=None, placeholder="Dont have an MDF Model? Try some sample examples here!")
+        selected_model = st.sidebar.selectbox("Choose an example model", list(example_models.keys()), index=None, placeholder="Dont have an MDF Model? Try some sample examples here!")
         if selected_model:
             return load_mdf_json(example_models[selected_model])
 
@@ -260,16 +261,18 @@ def load_model_from_content(file_content, file_extension):
 def main():
     if "checkbox" not in st.session_state:
         st.session_state.checkbox = False
-    header1, header2 = st.columns([1,12], vertical_alignment="top")
-    with header1:
-        st.image("logo.png", width=100)
-    with header2:
-        st.title("Welcome to Model Description Format")
-    st.write("Lets get started! Choose one of the following methods.")
+    
+    
     mdf_model = upload_file_and_load_to_model() # controller
 
     if mdf_model:
-
+        header1, header2 = st.columns([1, 8], vertical_alignment="top")
+        with header1:
+            with st.container():
+                st.image("logofinal.jpg")
+        with header2:
+            with st.container():
+                st.title("MDF: "+ mdf_model.id)
         mod_graph = mdf_model.graphs[0]
         nodes = mod_graph.nodes
         parameters = []
@@ -285,7 +288,16 @@ def main():
         param_inputs["Simulation Duration (s)"] = preferred_duration
         param_inputs["Time Step (s)"] = preferred_dt
         parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs, mod_graph, nodes)
-
+    else:
+        header1, header2 = st.columns([1, 8], vertical_alignment="top")
+        with header1:
+            with st.container():
+                st.image("logofinal.jpg")
+        with header2:
+            with st.container():
+                st.title("Welcome to Model Description Format")
+        st.write("ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org/ for more.")
+        st.header("Lets get started! Choose one of the following methods.")
 if __name__ == "__main__":
     main()
 
