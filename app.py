@@ -202,24 +202,7 @@ def upload_file_and_load_to_model():
     
     
     uploaded_file = st.sidebar.file_uploader("Choose a JSON/YAML/BSON file", type=["json", "yaml", "bson"])
-    if uploaded_file is not None:
-        file_content = uploaded_file.getvalue()
-        file_extension = uploaded_file.name.split('.')[-1].lower()
-        return load_model_from_content(file_content, file_extension)
-    col2, col3 = st.columns(2)
-    with col2:    
-        github_url = st.sidebar.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
-        if github_url:
-            try:
-                response = requests.get(github_url)
-                response.raise_for_status()
-                file_content = response.content
-                file_extension = github_url.split('.')[-1].lower()
-                return load_model_from_content(file_content, file_extension)
-            except requests.RequestException as e:
-                st.error(f"Error loading file from GitHub: {e}")
-                return None
-
+    github_url = st.sidebar.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
     example_models = {
         "Newton Cooling Model": "./examples/NewtonCoolingModel.json",
         # "ABCD": "./examples/ABCD.json",
@@ -229,13 +212,30 @@ def upload_file_and_load_to_model():
         "Simple":"./examples/Simple.json",
         # "Arrays":"./examples/Arrays.json",
         # "RNN":"./examples/RNNs.json",
-        # "IAF":"./examples/IAFs.json"
+        "IAF":"./examples/IAFs.json",
         "Izhikevich Test":"./examples/IzhikevichTest.mdf.json"
     }
-    with col3:
-        selected_model = st.sidebar.selectbox("Choose an example model", list(example_models.keys()), index=None, placeholder="Dont have an MDF Model? Try some sample examples here!")
-        if selected_model:
-            return load_mdf_json(example_models[selected_model])
+    selected_model = st.sidebar.selectbox("Choose an example model", list(example_models.keys()), index=None, placeholder="Dont have an MDF Model? Try some sample examples here!")
+    
+    if uploaded_file is not None:
+        file_content = uploaded_file.getvalue()
+        file_extension = uploaded_file.name.split('.')[-1].lower()
+        return load_model_from_content(file_content, file_extension)
+
+    if github_url:
+        try:
+            response = requests.get(github_url)
+            response.raise_for_status()
+            file_content = response.content
+            file_extension = github_url.split('.')[-1].lower()
+            return load_model_from_content(file_content, file_extension)
+        except requests.RequestException as e:
+            st.error(f"Error loading file from GitHub: {e}")
+            return None
+
+    
+    if selected_model:
+        return load_mdf_json(example_models[selected_model])
 
 
 
