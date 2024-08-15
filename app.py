@@ -327,9 +327,9 @@ def main():
                 st.image("logo.jpg")
         with header2:
             with st.container():
-                st.title("Welcome to Model Description Format")
+                st.title("Welcome to the Model Description Format UI")
         st.write("ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org/ for more.")
-        st.header("Lets get started! Choose one of the following methods.")
+        st.header("Let's get started! Choose one of the options on the left to load an MDF model.")
 if __name__ == "__main__":
     main()
 
