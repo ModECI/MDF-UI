@@ -1,0 +1,9 @@
+name: my_environment
+channels:
+  - defaults
+dependencies:
+  - python
+  - pip
+  - modeci_mdf
+  - streamlit
+  - matplotlib
