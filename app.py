@@ -5,7 +5,7 @@ from modeci_mdf.execution_engine import EvaluableGraph, EvaluableOutput
 import json
 import numpy as np
 import requests
-st.set_page_config(layout="wide", page_icon="logo.png", page_title="Model Description Format", menu_items={
+st.set_page_config(layout="wide", page_icon="page_icon.png", page_title="Model Description Format", menu_items={
         'Report a bug': "https://github.com/ModECI/MDF/",
         'About': "ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org/ for more."
     })
@@ -104,7 +104,6 @@ def show_simulation_results(all_node_results, stateful_nodes):
             else:
                 st.write(all_node_results[node_id])
 
-
 def update_selected_columns(node_id, column):
     st.session_state.selected_columns[node_id][column] = st.session_state[f"checkbox_{node_id}_{column}"]
 
@@ -114,7 +113,7 @@ def show_mdf_graph(mdf_model):
     image_path = mdf_model.id + ".png"
     st.image(image_path, caption="Model Graph Visualization")
 
-def show_json_output(mdf_model):
+def show_json_model(mdf_model):
     st.subheader("JSON Model")
     st.json(mdf_model.to_json())
 
@@ -122,27 +121,17 @@ def show_json_output(mdf_model):
 def view_tabs(mdf_model, param_inputs, stateful): # view
     tab1, tab2, tab3 = st.tabs(["Simulation Results", "MDF Graph", "Json Model"])
     with tab1:
-        if stateful:
-            if 'simulation_results' not in st.session_state:
-                st.session_state.simulation_results = None
-                
-            if st.session_state.simulation_results is not None:
-                show_simulation_results(st.session_state.simulation_results, stateful)
-            else:
-                st.write("Run the simulation to see results.") # model
+        if 'simulation_run' not in st.session_state or not st.session_state.simulation_run:
+            st.write("Run the simulation to see results.")
+        elif st.session_state.simulation_results is not None:
+            show_simulation_results(st.session_state.simulation_results, stateful)
         else:
-            if 'simulation_results' not in st.session_state:
-                st.session_state.simulation_results = None
-                
-            if st.session_state.simulation_results is not None:
-                show_simulation_results(st.session_state.simulation_results, stateful)
-            else:
-                st.write("Stateless.")
+            st.write("No simulation results available.")
 
     with tab2:
         show_mdf_graph(mdf_model) # view
     with tab3:
-        show_json_output(mdf_model) # view
+        show_json_model(mdf_model) # view
 
 def display_and_edit_array(array, key):
     if isinstance(array, list):
@@ -256,6 +245,9 @@ def parameter_form_to_update_model_and_view(mdf_model):
                     if param.id in param_inputs:
                         param.value = param_inputs[param.id]
             st.session_state.simulation_results = run_simulation(param_inputs, mdf_model, stateful)
+            st.session_state.simulation_run = True
+        else:
+            st.error("Please correct the invalid inputs before running the simulation.")
 
     view_tabs(mdf_model, param_inputs, stateful_nodes)
 
@@ -268,10 +260,10 @@ def upload_file_and_load_to_model():
         "ABCD": "./examples/ABCD.json",
         "FN": "./examples/FN.mdf.json",
         "States": "./examples/States.json",
-        "Swicthed RLC Circuit": "./examples/switched_rlc_circuit.json",
+        "Switched RLC Circuit": "./examples/switched_rlc_circuit.json",
         "Simple":"./examples/Simple.json",
         # "Arrays":"./examples/Arrays.json",
-        # "RNN":"./examples/RNNs.json",
+        # "RNN":"./examples/RNNs.json", # some issue
         "IAF":"./examples/IAFs.json",
         "Izhikevich Test":"./examples/IzhikevichTest.mdf.json"
     }
@@ -326,6 +318,7 @@ def main():
     mdf_model = upload_file_and_load_to_model() # controller
 
     if mdf_model:
+        st.session_state.current_model = mdf_model
         header1, header2 = st.columns([1, 8], vertical_alignment="top")
         with header1:
             with st.container():
