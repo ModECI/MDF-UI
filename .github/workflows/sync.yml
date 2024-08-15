@@ -15,4 +15,6 @@ jobs:
           fetch-depth: 0
           lfs: true
       - name: Push to hub
-        run: echo Test...
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: git push https://pgleeson:$HF_TOKEN@huggingface.co/spaces/ModECI/MDF-UI main
