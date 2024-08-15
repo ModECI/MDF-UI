@@ -1,0 +1,9 @@
+streamlit 
+modeci_mdf
+matplotlib==3.5.1
+graphviz 
+ipython
+torch
+modelspec
+graph_scheduler
+streamlit-code-editor

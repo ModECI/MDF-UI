@@ -1,0 +1,54 @@
+{
+    "NewtonCoolingModel": {
+        "format": "ModECI MDF v0.4",
+        "generating_application": "Python modeci-mdf v0.4.11",
+        "metadata": {
+            "preferred_duration": 100,
+            "preferred_dt": 0.01
+        },
+        "graphs": {
+            "NewtonCoolingModel": { 
+                "nodes": {
+                    "cool_node": {
+                        "parameters": {
+                            "cooling_coeff": {
+                                "metadata": {
+                                    "description": "Cooling coefficient in 1/s"
+                                },
+                                "value": 0.1
+                            },
+                            "T_a": {
+                                "metadata": {
+                                    "description": "Ambient temperature in degrees C"
+                                },
+                                "value": 20
+                            },
+                            "T_curr": {
+                                "metadata": {
+                                    "description": "Current temperature in degrees C"
+                                },
+                                "default_initial_value": 90,
+                                "time_derivative": "dT_dt"
+                            },
+                            "dT_dt": {
+                                "metadata": {
+                                    "description": "Rate of change of temperature in degrees C/s"
+                                },
+                                "value": "-cooling_coeff*(T_curr - T_a)",
+                                "default_initial_value": 0
+                            }
+                        },
+                        "output_ports": {
+                            "out_port": {
+                                "value": "T_curr"
+                            },
+                            "out_port2": {
+                                "value": "dT_dt"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
