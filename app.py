@@ -71,21 +71,36 @@ def show_simulation_results(all_node_results, stateful_nodes):
                     st.session_state.selected_columns = {node_id: {col: True for col in chart_data.columns}}
                 elif node_id not in st.session_state.selected_columns:
                     st.session_state.selected_columns[node_id] = {col: True for col in chart_data.columns}
-                columns = chart_data.columns
-                for column in columns:
-                    st.checkbox(
-                        f"{column}",
-                        value=st.session_state.selected_columns[node_id][column],
-                        key=f"checkbox_{node_id}_{column}",
-                        on_change=update_selected_columns,
-                        args=(node_id, column,)
-                    )
-
+                
                 # Filter the data based on selected checkboxes
                 filtered_data = chart_data[[col for col, selected in st.session_state.selected_columns[node_id].items() if selected]]
-
                 # Display the line chart with filtered data
                 st.line_chart(filtered_data, use_container_width=True, height=400)
+                columns = chart_data.columns
+                checks = st.columns(8)
+                if len(columns) > 0 and len(st.session_state.selected_columns[node_id])>1:
+                    for l, column in enumerate(columns):
+                        with checks[l]:
+                            st.checkbox(
+                                f"{column}",
+                                value=st.session_state.selected_columns[node_id][column],
+                                key=f"checkbox_{node_id}_{column}",
+                                on_change=update_selected_columns,
+                                args=(node_id, column,)
+                            )
+                #show checkboxes horizontally
+                # in case we late go back to vertical
+                # for column in columns:
+                #     st.checkbox(
+                #         f"{column}",
+                #         value=st.session_state.selected_columns[node_id][column],
+                #         key=f"checkbox_{node_id}_{column}",
+                #         on_change=update_selected_columns,
+                #         args=(node_id, column,)
+                #     )
+
+
+                
             else:
                 st.write(all_node_results[node_id])
 
@@ -250,7 +265,7 @@ def upload_file_and_load_to_model():
     github_url = st.sidebar.text_input("Enter GitHub raw file URL:", placeholder="Enter GitHub raw file URL")
     example_models = {
         "Newton Cooling Model": "./examples/NewtonCoolingModel.json",
-        # "ABCD": "./examples/ABCD.json",
+        "ABCD": "./examples/ABCD.json",
         "FN": "./examples/FN.mdf.json",
         "States": "./examples/States.json",
         "Swicthed RLC Circuit": "./examples/switched_rlc_circuit.json",
