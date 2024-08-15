@@ -20,6 +20,7 @@ def reset_simulation_state():
 def run_simulation(param_inputs, mdf_model):
     mod_graph = mdf_model.graphs[0]
     nodes = mod_graph.nodes
+    
     duration = param_inputs["Simulation Duration (s)"]
     dt = param_inputs["Time Step (s)"]
     
@@ -126,29 +127,40 @@ def display_and_edit_array(array, key):
     
     return np.array(edited_array)
 
-def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs, mod_graph, nodes):
+def parameter_form_to_update_model_and_view(mdf_model):
+    mod_graph = mdf_model.graphs[0]
+    nodes = mod_graph.nodes
+    parameters = []
+    for node in nodes:
+        parameters.append(node.parameters)
+    param_inputs = {}
+    if mdf_model.metadata:
+        preferred_duration = float(mdf_model.metadata.get("preferred_duration", 10))
+        preferred_dt = float(mdf_model.metadata.get("preferred_dt", 0.1))
+    else:
+        preferred_duration = 100
+        preferred_dt = 0.1
+    param_inputs["Simulation Duration (s)"] = preferred_duration
+    param_inputs["Time Step (s)"] = preferred_dt
+
     with st.form(key="parameter_form"):
         valid_inputs = True
         st.write("Model Parameters:")
-        with st.container(border=True):
-            # Create two columns outside the loop
-            col1, col2, col3, col4 = st.columns(4)
-            
-            for node_wise_parameter_key, node_wise_parameter in enumerate(parameters):
-                for i, param in enumerate(node_wise_parameter):
+
+        for node_index, node in enumerate(nodes):
+            with st.container(border=True):
+                st.write(f"Node: {node.id}")
+                
+                # Create four columns for each node
+                col1, col2, col3, col4 = st.columns(4)
+                
+                for i, param in enumerate(node.parameters):
                     if isinstance(param.value, str) or param.value is None:
                         continue  
-                    key = f"{param.id}_{i}"
+                    key = f"{param.id}_{node_index}_{i}"
                     
                     # Alternate between columns
-                    if i % 4 == 0:
-                        current_col = col1
-                    elif i%4 == 1:
-                        current_col = col2
-                    elif i%4 == 2:
-                        current_col = col3
-                    else:
-                        current_col = col4
+                    current_col = [col1, col2, col3, col4][i % 4]
                     
                     with current_col:
                         if isinstance(param.value, (list, np.ndarray)):
@@ -166,6 +178,7 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
                                 valid_inputs = False
                     
                     param_inputs[param.id] = value
+
         st.write("Simulation Parameters:")
         with st.container(border=True):
             # Add Simulation Duration and Time Step inputs
@@ -180,24 +193,23 @@ def parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs,
             except ValueError:
                 st.error("Invalid input for Simulation Duration. Please enter a valid number.")
                 valid_inputs = False
-        try:
-            param_inputs["Time Step (s)"] = float(time_step)
-        except ValueError:
-            st.error("Invalid input for Time Step. Please enter a valid number.")
-            valid_inputs = False
+            try:
+                param_inputs["Time Step (s)"] = float(time_step)
+            except ValueError:
+                st.error("Invalid input for Time Step. Please enter a valid number.")
+                valid_inputs = False
 
         run_button = st.form_submit_button("Run Simulation")
         
     if run_button:
         if valid_inputs:
-            for b in parameters:
-                for param in b:
+            for node in nodes:
+                for param in node.parameters:
                     if param.id in param_inputs:
                         param.value = param_inputs[param.id]
             st.session_state.simulation_results = run_simulation(param_inputs, mdf_model)
 
     view_tabs(mdf_model, param_inputs)
-
 def upload_file_and_load_to_model():
     
     
@@ -273,21 +285,8 @@ def main():
         with header2:
             with st.container():
                 st.title("MDF: "+ mdf_model.id)
-        mod_graph = mdf_model.graphs[0]
-        nodes = mod_graph.nodes
-        parameters = []
-        for node in nodes:
-            parameters.append(node.parameters)
-        param_inputs = {}
-        if mdf_model.metadata:
-            preferred_duration = float(mdf_model.metadata.get("preferred_duration", 10))
-            preferred_dt = float(mdf_model.metadata.get("preferred_dt", 0.1))
-        else:
-            preferred_duration = 100
-            preferred_dt = 0.1
-        param_inputs["Simulation Duration (s)"] = preferred_duration
-        param_inputs["Time Step (s)"] = preferred_dt
-        parameter_form_to_update_model_and_view(mdf_model, parameters, param_inputs, mod_graph, nodes)
+        
+        parameter_form_to_update_model_and_view(mdf_model)
     else:
         header1, header2 = st.columns([1, 8], vertical_alignment="top")
         with header1:
