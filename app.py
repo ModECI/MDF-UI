@@ -24,9 +24,6 @@ def run_simulation(param_inputs, mdf_model, stateful):
     if stateful:
         duration = param_inputs["Simulation Duration (s)"]
         dt = param_inputs["Time Step (s)"]
-    
-        
-        
         for node in nodes:
             eg = EvaluableGraph(mod_graph, verbose=False)
             t = 0
@@ -59,7 +56,7 @@ def run_simulation(param_inputs, mdf_model, stateful):
         for node in nodes:
             eg = EvaluableGraph(mod_graph, verbose=False)
             eg.evaluate()
-            all_node_results[node.id] = pd.DataFrame({op.value: [float(eg.enodes[node.id].evaluable_outputs[op.id].curr_value)] for op in node.output_ports})
+            all_node_results[node.id] = pd.DataFrame({op.value: [eg.enodes[node.id].evaluable_outputs[op.id].curr_value] for op in node.output_ports})
             
     return all_node_results
 def show_simulation_results(all_node_results, stateful_nodes):
@@ -88,21 +85,9 @@ def show_simulation_results(all_node_results, stateful_nodes):
                                 on_change=update_selected_columns,
                                 args=(node_id, column,)
                             )
-                #show checkboxes horizontally
-                # in case we late go back to vertical
-                # for column in columns:
-                #     st.checkbox(
-                #         f"{column}",
-                #         value=st.session_state.selected_columns[node_id][column],
-                #         key=f"checkbox_{node_id}_{column}",
-                #         on_change=update_selected_columns,
-                #         args=(node_id, column,)
-                #     )
-
-
-                
             else:
-                st.write(all_node_results[node_id])
+                for col in chart_data.columns:
+                    st.write(f"{col}: {chart_data[col][0]}")
 
 def update_selected_columns(node_id, column):
     st.session_state.selected_columns[node_id][column] = st.session_state[f"checkbox_{node_id}_{column}"]
@@ -137,21 +122,34 @@ def display_and_edit_array(array, key):
     if isinstance(array, list):
         array = np.array(array)
     
+    # st.write(array)
     rows, cols = array.shape if array.ndim > 1 else (1, len(array))
-    
-    edited_array = []
-    for i in range(rows):
-        row = []
-        for j in range(cols):
-            value = array[i][j] if array.ndim > 1 else array[i]
-            edited_value = st.text_input(f"[{i}][{j}]", value=str(value), key=f"{key}_{i}_{j}")
-            try:
-                row.append(float(edited_value))
-            except ValueError:
-                st.error(f"Invalid input for [{i}][{j}]. Please enter a valid number.")
-        edited_array.append(row)
-    
-    return np.array(edited_array)
+    if rows*cols > 10:
+        st.write(array)
+        st.write("Array Shape:", array.shape)
+    else:
+        edited_array = []
+        if rows == 1:
+            for j in range(cols):
+                value = array[j] if array.ndim > 1 else array[j]
+                edited_value = st.text_input(f"[{j}]", value=str(value), key=f"{key}_{j}")
+                try:
+                    edited_array.append(float(edited_value))
+                except ValueError:
+                    st.error(f"Invalid input for [{j}]. Please enter a valid number.")
+        else:
+            for i in range(rows):
+                row = []
+                for j in range(cols):
+                    value = array[i][j] if array.ndim > 1 else array[i]
+                    edited_value = st.text_input(f"[{i}][{j}]", value=str(value), key=f"{key}_{i}_{j}")
+                    try:
+                        row.append(float(edited_value))
+                    except ValueError:
+                        st.error(f"Invalid input for [{i}][{j}]. Please enter a valid number.")
+                edited_array.append(row)
+        
+        return np.array(edited_array)
 
 def parameter_form_to_update_model_and_view(mdf_model):
     mod_graph = mdf_model.graphs[0]
@@ -262,10 +260,11 @@ def upload_file_and_load_to_model():
         "States": "./examples/States.json",
         "Switched RLC Circuit": "./examples/switched_rlc_circuit.json",
         "Simple":"./examples/Simple.json",
-        # "Arrays":"./examples/Arrays.json",
+        "Arrays":"./examples/Arrays.json",
         # "RNN":"./examples/RNNs.json", # some issue
         "IAF":"./examples/IAFs.json",
-        "Izhikevich Test":"./examples/IzhikevichTest.mdf.json"
+        "Izhikevich Test":"./examples/IzhikevichTest.mdf.json", 
+        "Keras to MDF IRIS":"./examples/keras_to_MDF.json",
     }
     selected_model = st.sidebar.selectbox("Choose an example model", list(example_models.keys()), index=None, placeholder="Dont have an MDF Model? Try some sample examples here!")
     
