@@ -2,11 +2,11 @@ import streamlit as st, pandas as pd, os, io
 from modeci_mdf.mdf import Model, Graph, Node, Parameter, OutputPort
 from modeci_mdf.utils import load_mdf_json, load_mdf, load_mdf_yaml
 from modeci_mdf.execution_engine import EvaluableGraph, EvaluableOutput
-import json
+import json, yaml, bson
 import numpy as np
 import requests
 st.set_page_config(layout="wide", page_icon="page_icon.png", page_title="Model Description Format", menu_items={
-        'Report a bug': "https://github.com/ModECI/MDF/",
+        'Report a bug': "https://github.com/ModECI/MDF-UI/",
         'About': "ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org/ for more."
     })
 
@@ -296,7 +296,11 @@ def load_model_from_content(file_content, file_extension):
             json_data = json.loads(file_content)
             mdf_model = Model.from_dict(json_data)
         elif file_extension in ['yaml', 'yml']:
-            mdf_model = load_mdf_yaml(io.BytesIO(file_content))
+            yaml_data = yaml.safe_load(file_content)
+            mdf_model = Model.from_dict(yaml_data)
+        elif file_extension == 'bson':
+            bson_data = bson.decode(file_content)
+            mdf_model = Model.from_dict(bson_data)
         else:
             st.error("Unsupported file format. Please use JSON or YAML files.")
             return None
