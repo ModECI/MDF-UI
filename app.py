@@ -102,7 +102,6 @@ def show_json_model(mdf_model):
     st.subheader("JSON Model")
     st.json(mdf_model.to_json())
 
-# st.cache_data()
 def view_tabs(mdf_model, param_inputs, stateful): # view
     tab1, tab2, tab3 = st.tabs(["Simulation Results", "MDF Graph", "Json Model"])
     with tab1:
@@ -112,7 +111,6 @@ def view_tabs(mdf_model, param_inputs, stateful): # view
             show_simulation_results(st.session_state.simulation_results, stateful)
         else:
             st.write("No simulation results available.")
-
     with tab2:
         show_mdf_graph(mdf_model) # view
     with tab3:
@@ -121,8 +119,6 @@ def view_tabs(mdf_model, param_inputs, stateful): # view
 def display_and_edit_array(array, key):
     if isinstance(array, list):
         array = np.array(array)
-    
-    # st.write(array)
     rows, cols = array.shape if array.ndim > 1 else (1, len(array))
     if rows*cols > 10:
         st.write(array)
@@ -188,8 +184,13 @@ def parameter_form_to_update_model_and_view(mdf_model):
                 
                 # Create four columns for each node
                 col1, col2, col3, col4 = st.columns(4)
-                
+                parameter_list = []
                 for i, param in enumerate(node.parameters):
+                    if isinstance(param.value, str) or param.value is None:
+                        continue  
+                    else:
+                        parameter_list.append(param)
+                for i, param in enumerate(parameter_list):
                     if isinstance(param.value, str) or param.value is None:
                         continue  
                     key = f"{param.id}_{node_index}_{i}"
@@ -235,7 +236,7 @@ def parameter_form_to_update_model_and_view(mdf_model):
                     valid_inputs = False
 
         run_button = st.form_submit_button("Run Simulation")
-        
+    view_tabs(mdf_model, param_inputs, stateful_nodes) 
     if run_button:
         if valid_inputs:
             for node in nodes:
@@ -247,7 +248,7 @@ def parameter_form_to_update_model_and_view(mdf_model):
         else:
             st.error("Please correct the invalid inputs before running the simulation.")
 
-    view_tabs(mdf_model, param_inputs, stateful_nodes)
+    
 
 def upload_file_and_load_to_model():
    
