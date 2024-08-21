@@ -236,7 +236,7 @@ def parameter_form_to_update_model_and_view(mdf_model):
                     valid_inputs = False
 
         run_button = st.form_submit_button("Run Simulation")
-    view_tabs(mdf_model, param_inputs, stateful_nodes) 
+    
     if run_button:
         if valid_inputs:
             for node in nodes:
@@ -247,7 +247,7 @@ def parameter_form_to_update_model_and_view(mdf_model):
             st.session_state.simulation_run = True
         else:
             st.error("Please correct the invalid inputs before running the simulation.")
-
+    view_tabs(mdf_model, param_inputs, stateful_nodes) 
     
 
 def upload_file_and_load_to_model():
