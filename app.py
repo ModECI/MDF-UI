@@ -7,7 +7,7 @@ import numpy as np
 import requests
 st.set_page_config(layout="wide", page_icon="page_icon.png", page_title="Model Description Format", menu_items={
         'Report a bug': "https://github.com/ModECI/MDF-UI/",
-        'About': "ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org/ for more."
+        'About': "ModECI (Model Exchange and Convergence Initiative) is a multi-investigator collaboration that aims to develop a standardized format for exchanging computational models across diverse software platforms and domains of scientific research and technology development, with a particular focus on neuroscience, Machine Learning and Artificial Intelligence. Refer to https://modeci.org for more."
     })
 
 def reset_simulation_state():
