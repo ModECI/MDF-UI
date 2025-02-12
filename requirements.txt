@@ -1,5 +1,5 @@
 streamlit 
-modeci_mdf
+modeci_mdf>=0.4.11
 matplotlib==3.5.1
 graphviz 
 ipython
